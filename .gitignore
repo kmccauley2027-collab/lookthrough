@@ -1,0 +1,26 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Environment and secrets (none are used today; keep them out if added later)
+.env
+.env.*
+*.pem
+*.key
+
+# If the project later adds Node tooling
+node_modules/
+dist/
+build/
+npm-debug.log*
+
+# Logs and scratch
+*.log
+tmp/

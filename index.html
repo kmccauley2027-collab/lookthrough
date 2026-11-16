@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lookthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout idea: research-terminal app — top nav, scorecards and tables, numbers in mono */
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --ink: #131a2a;
+  --muted: #5b6478;
+  --line: #dde1e8;
+  --accent: #1f4fd8;
+  --accent-soft: #e6ecfc;
+  --good: #137a4b;
+  --good-soft: #e3f4ea;
+  --warn: #a86400;
+  --warn-soft: #fdf1dc;
+  --bad: #b3261e;
+  --bad-soft: #fbe5e3;
+  --hatch: #c4c9d3;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d121c; --surface: #151c29; --ink: #e8ecf3; --muted: #9aa4b8; --line: #263043;
+    --accent: #7b9dff; --accent-soft: #1c2747;
+    --good: #4cc78a; --good-soft: #10291d; --warn: #f0b04a; --warn-soft: #2e2210;
+    --bad: #ff8178; --bad-soft: #321614; --hatch: #3a4558;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d121c; --surface: #151c29; --ink: #e8ecf3; --muted: #9aa4b8; --line: #263043;
+  --accent: #7b9dff; --accent-soft: #1c2747;
+  --good: #4cc78a; --good-soft: #10291d; --warn: #f0b04a; --warn-soft: #2e2210;
+  --bad: #ff8178; --bad-soft: #321614; --hatch: #3a4558;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-body); }
+a { color: var(--accent); }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 34px; font-weight: 700; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 17px; font-weight: 600; }
+.mono, td.num, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+.banner { background: var(--warn-soft); color: var(--warn); font-size: 13px; padding: 6px 16px; text-align: center; border-bottom: 1px solid var(--line); }
+header.top { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.top-inner { max-width: 1120px; margin: 0 auto; padding: 0 16px; display: flex; gap: 24px; align-items: center; min-height: 58px; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 21px; color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+.brand svg { flex: none; }
+nav.main { display: flex; gap: 4px; flex-wrap: wrap; }
+nav.main a { text-decoration: none; color: var(--muted); padding: 6px 10px; border-radius: 6px; font-weight: 500; font-size: 14px; }
+nav.main a:hover { color: var(--ink); background: var(--bg); }
+nav.main a.active { color: var(--accent); background: var(--accent-soft); }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+main { max-width: 1120px; margin: 0 auto; padding: 28px 16px 64px; display: grid; gap: 24px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.panel > h2, .panel > h3 { margin-bottom: 12px; }
+.grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
+.grid-even { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+@media (max-width: 860px) { .grid2, .grid-even { grid-template-columns: 1fr; } }
+
+.hero { display: grid; gap: 10px; }
+.hero p { max-width: 62ch; margin: 0; color: var(--muted); font-size: 16px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.stats > div { padding: 14px 18px; border-right: 1px solid var(--line); }
+.stats > div:last-child { border-right: 0; }
+.stats .v { font-family: var(--font-mono); font-size: 24px; font-weight: 600; }
+.stats .l { font-size: 13px; color: var(--muted); }
+@media (max-width: 640px) { .stats { grid-template-columns: 1fr 1fr; } .stats > div:nth-child(2) { border-right: 0; } .stats > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th.num, td.num { text-align: right; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--bg); }
+.fundname { font-weight: 600; color: var(--ink); text-decoration: none; }
+.fundname:hover { color: var(--accent); }
+.ticker { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+.grade { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 6px; font-family: var(--font-display); font-weight: 700; font-size: 17px; }
+.grade.big { width: 72px; height: 72px; font-size: 40px; border-radius: 12px; }
+.g-A, .g-B { background: var(--good-soft); color: var(--good); }
+.g-C { background: var(--warn-soft); color: var(--warn); }
+.g-D, .g-F { background: var(--bad-soft); color: var(--bad); }
+.chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.neutral { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+
+.alerts { display: grid; gap: 10px; }
+.alert { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--bg); border-radius: 0 6px 6px 0; font-size: 14px; }
+.alert.warn { border-color: var(--warn); }
+.alert.bad { border-color: var(--bad); }
+.alert .when { font-size: 12px; color: var(--muted); }
+
+.fund-head { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.fund-head .meta { display: grid; gap: 4px; flex: 1; min-width: 240px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.facts > div { background: var(--surface); padding: 12px 14px; }
+.facts .l { font-size: 12px; color: var(--muted); }
+.facts .v { font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
+
+.scores { display: grid; gap: 12px; }
+.score-row { display: grid; grid-template-columns: 150px 1fr 40px; gap: 12px; align-items: center; }
+.score-row .lbl { font-weight: 500; font-size: 14px; }
+.score-row .why { grid-column: 2 / 4; font-size: 13px; color: var(--muted); margin-top: -6px; }
+.bar { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+.bar > span { display: block; height: 100%; border-radius: 4px; }
+@media (max-width: 520px) { .score-row { grid-template-columns: 1fr 40px; } .score-row .lbl { grid-column: 1 / 3; } .score-row .why { grid-column: 1 / 3; } }
+
+.stack { display: flex; height: 44px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.stack > div { height: 100%; min-width: 2px; }
+.stack .prem { background: repeating-linear-gradient(135deg, var(--hatch) 0 6px, transparent 6px 12px); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 10px; font-size: 13px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend i.prem { background: repeating-linear-gradient(135deg, var(--hatch) 0 3px, transparent 3px 6px); border: 1px solid var(--hatch); }
+.callout { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0 0 12px; }
+
+.form { display: grid; gap: 14px; }
+.field { display: grid; gap: 4px; }
+.field label { font-weight: 500; font-size: 14px; }
+.field .hint { font-size: 12px; color: var(--muted); }
+input[type="number"], select { font: 15px var(--font-mono); padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); width: 100%; max-width: 220px; }
+td input[type="number"] { max-width: 120px; text-align: right; }
+.rungs { display: grid; gap: 8px; }
+.rung { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.rung .n { font-family: var(--font-mono); font-weight: 600; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--bg); color: var(--muted); }
+.rung.done .n { background: var(--good-soft); color: var(--good); }
+.rung.current { border-color: var(--accent); background: var(--accent-soft); }
+.rung.current .n { background: var(--accent); color: var(--surface); }
+.btn { font: 600 14px var(--font-body); padding: 9px 14px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; text-decoration: none; display: inline-block; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.prose { max-width: 68ch; }
+.prose p, .prose li { color: var(--ink); }
+.prose h3 { margin-top: 18px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.kpi { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--surface); }
+.kpi .l { font-size: 12px; color: var(--muted); }
+.kpi .v { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
+.kpi.bad { border-color: var(--bad); background: var(--bad-soft); }
+.kpi.warn { border-color: var(--warn); background: var(--warn-soft); }
+.kpi.good { border-color: var(--good); background: var(--good-soft); }
+.searchbox { font: 15px var(--font-body); padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; width: 100%; max-width: 420px; background: var(--surface); color: var(--ink); }
+footer { max-width: 1120px; margin: 0 auto; padding: 0 16px 40px; font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .bar > span { transition: width .4s ease; } }
+</style>
+</head>
+<body>
+<div class="banner">Class prototype using real funds. Figures come from public filings and fund data as of the dates shown, mostly Jun to Nov 2026. Not real-time and not investment advice.</div>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="#home">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="7" y="9" width="2" height="5" fill="currentColor"/><rect x="10" y="7" width="2" height="7" fill="currentColor"/><rect x="13" y="10" width="2" height="4" fill="currentColor"/><line x1="17" y1="17" x2="23" y2="23" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+      Lookthrough
+    </a>
+    <nav class="main" id="nav">
+      <a href="#home" data-r="home">Fund ratings</a>
+      <a href="#companies" data-r="companies">Companies</a>
+      <a href="#portfolio" data-r="portfolio">My Lookthrough</a>
+      <a href="#ready" data-r="ready">Am I ready?</a>
+      <a href="#method" data-r="method">How we score</a>
+    </nav>
+  </div>
+</header>
+<main id="app"></main>
+<footer>Lookthrough is an independent class prototype and takes no money from the funds it rates. Scores are general information shown the same way to everyone, not personal investment advice.</footer>
+
+<script>
+// ---------- Data: public filings and fund sites, as of the dates shown ----------
+const TODAY = "Nov 16, 2026";
+const COMPANIES = {
+  spacex:      { name: "SpaceX", sector: "Aerospace (incl. xAI)", status: "public", since: "June 2026", color: "#1f4fd8" },
+  openai:      { name: "OpenAI", sector: "AI", status: "private", color: "#0f8f80" },
+  anthropic:   { name: "Anthropic", sector: "AI", status: "private", color: "#c2410c" },
+  databricks:  { name: "Databricks", sector: "Data & AI", status: "private", color: "#d97706" },
+  stripe:      { name: "Stripe", sector: "Payments", status: "private", color: "#7c3aed" },
+  ramp:        { name: "Ramp", sector: "Fintech", status: "private", color: "#65a30d" },
+  revolut:     { name: "Revolut", sector: "Fintech", status: "private", color: "#0891b2" },
+  mercor:      { name: "Mercor", sector: "AI hiring", status: "private", color: "#be185d" },
+  airwallex:   { name: "Airwallex", sector: "Payments", status: "private", color: "#db2777" },
+  canva:       { name: "Canva", sector: "Software", status: "private", color: "#9333ea" },
+  boom:        { name: "Boom Supersonic", sector: "Aerospace", status: "private", color: "#0e7490" },
+  anduril:     { name: "Anduril", sector: "Defense", status: "private", color: "#4d7c0f" },
+  openevidence:{ name: "OpenEvidence", sector: "Health AI", status: "private", color: "#b45309" },
+  shieldai:    { name: "Shield AI", sector: "Defense", status: "private", color: "#57534e" },
+  cerebras:    { name: "Cerebras", sector: "AI chips", status: "public", since: "2026", color: "#6d28d9" },
+  lime:        { name: "Lime (Neutron Holdings)", sector: "Mobility", status: "private", color: "#16a34a" },
+  arcticwolf:  { name: "Arctic Wolf", sector: "Cybersecurity", status: "private", color: "#475569" }
+};
+const OTHER_COLORS = { other: "#8a93a6", otherpriv: "#8a93a6", public: "#a9b1c1", cash: "#cfd5df", undisclosed: "#b9c0cc", pubcash: "#b4bccb" };
+const LABELS = { other: "Other holdings & cash", otherpriv: "Other private companies", public: "Public stocks", cash: "Money market fund (cash)", undisclosed: "Other holdings & cash (not broken out)", pubcash: "Public stocks & cash" };
+
+const FUNDS = [
+  { id: "rvi", ticker: "RVI", name: "Robinhood Ventures Fund I", type: "Exchange-traded closed-end fund", sponsor: "Robinhood Ventures",
+    price: 22.10, priceDate: "Nov 4, 2026", nav: 25.02, navDate: "Jun 30, 2026", navAge: 139,
+    expense: 2.72, expenseNote: "2.72% total expenses (CEF Connect); management fee is 2.00% of net assets from Sept 10, 2026", load: 0,
+    liquidity: "daily", liqNote: "Trades daily on the NYSE. The price can sit well above or below asset value.",
+    disclosure: "quarterly", min: 22, minLabel: "1 share",
+    holdingsAsOf: "Jun 30, 2026 (N-PORT, % of net assets)",
+    holdings: { databricks: .1271, openai: .1100, mercor: .0784, revolut: .0731, ramp: .0489, airwallex: .0471, stripe: .0433, boom: .0395, canva: .0367, spacex: .0125, otherpriv: .0606, cash: .3228 },
+    note: "About 32% sat in a money market fund at June 30, and the 2.00% fee accrues on net assets including that cash.",
+    sources: [["CEF Connect: price, NAV, expenses", "https://www.cefconnect.com/fund/RVI"], ["Holdings from June 30 N-PORT (summary)", "https://www.mentorsurge.com/blog/rvi-robinhood-ventures-fund-closed-end-fund-nav-20260827"], ["Cash and fee basis", "https://altstreet.investments/platforms/reviews/robinhood-ventures"]] },
+  { id: "dxyz", ticker: "DXYZ", name: "Destiny Tech100", type: "Exchange-traded closed-end fund", sponsor: "Destiny Advisors",
+    price: 26.47, priceDate: "Nov 13, 2026", nav: 34.30, navDate: "Jun 30, 2026", navAge: 139,
+    expense: 4.53, expenseNote: "4.53% total expenses for 2025; the 2.50% management fee is charged on gross assets", load: 0,
+    liquidity: "daily", liqNote: "Trades daily on the NYSE. Its price has swung from hundreds of percent above NAV to well below it.",
+    disclosure: "website", min: 26, minLabel: "1 share",
+    holdingsAsOf: "Destiny website, checked Nov 10, 2026 (% of portfolio, not of net assets)",
+    holdings: { anthropic: .144, spacex: .106, openai: .026, openevidence: .021, shieldai: .018, databricks: .012, undisclosed: .673 },
+    note: "The 52-week range of its premium runs from +234% to -38%. The NAV it trades against is from June 30.",
+    sources: [["CEF Connect: price, NAV, premium range", "https://www.cefconnect.com/fund/DXYZ"], ["Top holdings (Destiny site, via IPO Watch)", "https://ipowatch.ca/company/dxyz/"], ["Fee basis (SEC 424B5)", "https://www.sec.gov/Archives/edgar/data/1843974/000157587225000526/dxyz088_424b5.htm"]] },
+  { id: "vcx", ticker: "VCX", name: "Fundrise Innovation Fund", type: "Exchange-traded closed-end fund", sponsor: "Fundrise",
+    price: 22.38, priceDate: "Nov 13, 2026", nav: 21.70, navDate: "Jun 30, 2026", navAge: 139,
+    expense: 3.00, expenseNote: "1.85% management fee, no carried interest; about 3.00% total operating expenses", load: 0,
+    liquidity: "daily", liqNote: "Listed on the NYSE since March 19, 2026. Before that, investors waited for quarterly buybacks.",
+    disclosure: "quarterly", min: 22, minLabel: "1 share",
+    holdingsAsOf: "Mar 31, 2026 (annual report, % of net assets)",
+    holdings: { anthropic: .165, databricks: .141, openai: .124, anduril: .055, ramp: .041, other: .474 },
+    note: "VCX traded as high as $575 this year, against a NAV near $19 to $22.",
+    sources: [["CEF Connect: price, 52-week high", "https://www.cefconnect.com/fund/VCX"], ["June 30 NAV of $21.70", "https://www.crowdfundedwealth.com/reviews/fundrise-vcx-vs-dxyz"], ["Holdings and fees", "https://angelinvestorsnetwork.com/venture-capital/fundrise-innovation-fund-review-2026-venture-evergreen-fund"], ["Fee structure", "https://news.crunchbase.com/?p=92399"]] },
+  { id: "arkvx", ticker: "ARKVX", name: "ARK Venture Fund", type: "Interval fund", sponsor: "ARK Invest",
+    price: null, nav: null, navDate: "daily", navAge: 1,
+    expense: 2.90, expenseNote: "2.90% net after fee waivers (3.49% gross); the waivers can be ended by the fund's board", load: 0,
+    liquidity: "quarterly", liqNote: "Buys back up to 5% of the fund each quarter. A tokenized share class launched in Sept 2026 adds another way to sell.",
+    disclosure: "daily", min: 500, minLabel: "$500",
+    holdingsAsOf: "Aug 31, 2026 (ARK holdings file)",
+    holdings: { spacex: .0754, openai: .0526, anthropic: .0386, otherpriv: .6888, pubcash: .1446 },
+    note: "About 78% of the fund was in companies without a public ticker at Aug 31. The split of the rest is our estimate from that figure.",
+    sources: [["Holdings at Aug 31 and private share", "https://www.kucoin.com/news/flash/ark-invest-tokenizes-1-3-billion-venture-fund-with-spacex-openai-holdings"], ["Expense ratios", "https://ark-funds.com/funds/arkvx"], ["Buyback history", "https://www.morningstar.com/funds/ark-venture-adds-an-exit-door-will-anyone-be-other-side"]] },
+  { id: "privx", ticker: "PRIVX", name: "The Private Shares Fund (Class A)", type: "Interval fund", sponsor: "Liberty Street Advisors",
+    price: 50.98, nav: 50.98, navDate: "Oct 28, 2026", navAge: 19,
+    expense: 2.54, expenseNote: "2.54% total expenses (Class A) plus a front-end sales load of up to 5.75%; some brokers offer it without the load", load: 5.75,
+    liquidity: "quarterly", prorated: true, liqNote: "Buys back up to 5% of shares each quarter. The June 2026 offer was oversubscribed and requests were prorated.",
+    disclosure: "monthly", min: 2500, minLabel: "$2,500",
+    holdingsAsOf: "SpaceX at Jun 30, 2026; other top holdings at Jul 31, 2026",
+    holdings: { spacex: .237, cerebras: .0264, databricks: .0242, lime: .0213, arcticwolf: .0201, other: .671 },
+    note: "SpaceX, now listed on Nasdaq, was 23.7% of net assets at June 30 and about 70% of the fund's unrealized gains.",
+    sources: [["Fees, SpaceX weight, repurchases", "https://altstreet.investments/platforms/reviews/private-shares-fund"], ["Expense ratio, load, NAV (Schwab)", "https://www.schwab.wallst.com/Prospect/Research/mutualfunds/fees.asp?symbol=privx"], ["Top holdings Jul 31 (Schwab)", "https://www.schwab.wallst.com/Prospect/Research/mutualfunds/portfolio.asp?symbol=privx"]] },
+  { id: "xovr", ticker: "XOVR", name: "ERShares Private-Public Crossover ETF", type: "ETF", sponsor: "ERShares",
+    price: 21.19, priceDate: "Oct 20, 2026", nav: null, navDate: "daily", navAge: 1,
+    expense: 1.81, expenseNote: "1.81% expense ratio", load: 0,
+    liquidity: "etf", liqNote: "Trades daily. Market makers keep the price close to asset value.",
+    disclosure: "daily", min: 21, minLabel: "1 share",
+    holdingsAsOf: "Top holdings, Oct 2026",
+    holdings: { spacex: .1812, public: .8188 },
+    note: "Its SpaceX stake is held through an SPV. Nearly everything else is large public stocks like NVIDIA, Alphabet and Meta.",
+    sources: [["Price, expense ratio, top holdings", "https://stockanalysis.com/etf/xovr/"]] }
+];
+
+const ALERTS = [
+  { kind: "warn", fund: "privx", when: "Since June 2026", text: "SpaceX is now public. PRIVX (23.7%), XOVR (18.1%) and ARKVX (7.5%) still charge fund fees on it. You can buy SpaceX shares directly with no fund fee." },
+  { kind: "", fund: "dxyz", when: "Nov 13, 2026", text: "DXYZ trades 22.8% below its last reported NAV. That NAV is from June 30, so the real gap could be bigger or smaller." },
+  { kind: "bad", fund: "vcx", when: "2026", text: "VCX hit $575 a share this year. It now trades near $22, about 3% above its June 30 NAV." },
+  { kind: "warn", fund: "privx", when: "June 2026", text: "PRIVX's quarterly buyback was oversubscribed. Shareholders who asked to sell got only part of their money out." },
+  { kind: "warn", fund: "rvi", when: "Jun 30, 2026", text: "RVI held 32% of its assets in a money market fund while charging its management fee on net assets including that cash." },
+  { kind: "", fund: "arkvx", when: "Sept 24, 2026", text: "ARK launched a tokenized ARKVX share class, giving holders a way to sell outside the quarterly windows." }
+];
+
+// ---------- Math ----------
+const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, v));
+const prem = f => (f.price && f.nav && f.liquidity === "daily") ? f.price / f.nav - 1 : 0;
+const assetsPer100 = f => 100 * (1 - f.load / 100) / (1 + prem(f));
+const isCo = k => !!COMPANIES[k];
+const privateShare = f => Object.entries(f.holdings).filter(([k]) => (isCo(k) && COMPANIES[k].status === "private") || k === "otherpriv").reduce((s, [, w]) => s + w, 0);
+const publicCoShare = f => Object.entries(f.holdings).filter(([k]) => isCo(k) && COMPANIES[k].status === "public").reduce((s, [, w]) => s + w, 0);
+function scores(f) {
+  const p = prem(f);
+  const premium = p > 0 ? clamp(100 - p * 180) : clamp(100 - Math.abs(p) * 40);
+  const annualCost = f.expense + f.load / 5;
+  const cost = clamp(100 - (annualCost - 0.5) * 25);
+  const liquidity = f.liquidity === "etf" ? 100 : f.liquidity === "daily" ? 90 : f.prorated ? 30 : 40;
+  const fresh = clamp(100 - f.navAge / 2);
+  const transp = { daily: 100, monthly: 80, website: 70, quarterly: 55 }[f.disclosure];
+  const total = premium * .30 + cost * .25 + liquidity * .20 + fresh * .15 + transp * .10;
+  return { premium, cost, liquidity, fresh, transp, total, annualCost };
+}
+const grade = t => t >= 80 ? "A" : t >= 68 ? "B" : t >= 55 ? "C" : t >= 42 ? "D" : "F";
+const $ = (n, d = 2) => (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (n, d = 1) => (n * 100).toFixed(d) + "%";
+const sPct = (n, d = 1) => (n >= 0 ? "+" : "") + (n * 100).toFixed(d) + "%";
+const fundById = id => FUNDS.find(f => f.id === id);
+const colorFor = k => (COMPANIES[k] && COMPANIES[k].color) || OTHER_COLORS[k];
+const labelFor = k => (COMPANIES[k] && COMPANIES[k].name) || LABELS[k];
+const scoreColor = v => v >= 70 ? "var(--good)" : v >= 45 ? "var(--warn)" : "var(--bad)";
+const statusChip = k => !isCo(k) ? "" : COMPANIES[k].status === "public" ? `<span class="chip warn">Public since ${COMPANIES[k].since}</span>` : `<span class="chip neutral">Private</span>`;
+function premChip(f) {
+  const p = prem(f);
+  if (f.liquidity === "quarterly") return `<span class="chip neutral">Bought at NAV</span>`;
+  if (f.liquidity === "etf") return `<span class="chip good">Near NAV</span>`;
+  if (p > 0.15) return `<span class="chip bad">${sPct(p)} premium</span>`;
+  if (p > 0.02) return `<span class="chip warn">${sPct(p)} premium</span>`;
+  if (p < -0.02) return `<span class="chip good">${sPct(p)} discount</span>`;
+  return `<span class="chip good">Near NAV</span>`;
+}
+function liqChip(f) {
+  if (f.liquidity === "etf" || f.liquidity === "daily") return `<span class="chip good">Daily</span>`;
+  return f.prorated ? `<span class="chip bad">Quarterly, prorated</span>` : `<span class="chip warn">Quarterly, 5% cap</span>`;
+}
+function topPrivate(f) {
+  const ks = Object.keys(f.holdings).filter(k => isCo(k) && COMPANIES[k].status === "private").sort((a, b) => f.holdings[b] - f.holdings[a]);
+  return ks.length ? ks[0] : null;
+}
+
+// ---------- User state (in memory) ----------
+const state = {
+  holdings: { rvi: 100, dxyz: 0, vcx: 100, arkvx: 500, privx: 0, xovr: 0 },
+  ready: { emergency: 4, debt: "no", investable: 8000 },
+  sort: "grade", q: ""
+};
+function readiness() {
+  const r = state.ready;
+  let rung = 0;
+  if (r.debt === "no" && r.emergency >= 3) rung = 1;
+  if (rung === 1 && r.emergency >= 6) rung = 2;
+  if (rung === 2 && r.investable >= 25000) rung = 3;
+  const capPct = [0, 0.05, 0.10, 0.15][rung];
+  return { rung, capPct, cap: r.investable * capPct };
+}
+
+// ---------- Views ----------
+function viewHome() {
+  const listed = FUNDS.filter(f => f.liquidity === "daily");
+  let list = FUNDS.map(f => ({ f, s: scores(f) }));
+  const q = state.q.trim().toLowerCase();
+  if (q) list = list.filter(({ f }) => (f.name + " " + f.ticker + " " + f.sponsor + " " + Object.keys(f.holdings).map(labelFor).join(" ")).toLowerCase().includes(q));
+  const sorters = { grade: (a, b) => b.s.total - a.s.total, premium: (a, b) => prem(b.f) - prem(a.f), cost: (a, b) => b.s.annualCost - a.s.annualCost };
+  list.sort(sorters[state.sort]);
+  const nowPublicFunds = FUNDS.filter(f => publicCoShare(f) > 0.05).length;
+  return `
+  <section class="hero">
+    <h1>See what you actually own in private-market funds</h1>
+    <p>Robinhood, Destiny, Fundrise, ARK and others sell regular investors access to OpenAI, Anthropic and Databricks, no accreditation needed. Lookthrough rates each fund independently: how much of the famous name you really get, whether you're overpaying, what it costs and when you can get your money out.</p>
+  </section>
+  <section class="stats" aria-label="Coverage">
+    <div><div class="v">${FUNDS.length}</div><div class="l">Retail funds rated</div></div>
+    <div><div class="v">$${Math.min(...FUNDS.map(f => f.min))}</div><div class="l">Lowest minimum</div></div>
+    <div><div class="v">${nowPublicFunds}</div><div class="l">Funds charging fees on SpaceX, now public</div></div>
+    <div><div class="v">$0</div><div class="l">Taken from fund sponsors</div></div>
+  </section>
+  <div class="grid2">
+    <section class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:12px">
+        <h2>Fund ratings</h2>
+        <div class="row">
+          <label for="sort" class="small muted">Sort</label>
+          <select id="sort" style="max-width:170px">
+            <option value="grade"${state.sort === "grade" ? " selected" : ""}>Lookthrough score</option>
+            <option value="premium"${state.sort === "premium" ? " selected" : ""}>Highest premium</option>
+            <option value="cost"${state.sort === "cost" ? " selected" : ""}>Highest cost</option>
+          </select>
+        </div>
+      </div>
+      <input id="q" class="searchbox" type="search" placeholder="Search a fund or a company, like Anthropic" value="${state.q.replace(/"/g, "&quot;")}" aria-label="Search funds">
+      <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>Score</th><th>Fund</th><th>Price vs assets</th><th class="num">$100 buys</th><th>Top private name</th><th>Get money out</th><th class="num">Minimum</th></tr></thead>
+        <tbody>
+        ${list.map(({ f, s }) => {
+          const tp = topPrivate(f);
+          return `<tr class="click" data-go="fund-${f.id}">
+            <td><span class="grade g-${grade(s.total)}" title="${s.total.toFixed(0)}/100">${grade(s.total)}</span></td>
+            <td><a class="fundname" href="#fund-${f.id}">${f.name}</a><div class="ticker">${f.ticker} · ${f.type}</div></td>
+            <td>${premChip(f)}</td>
+            <td class="num">${$(assetsPer100(f))}</td>
+            <td>${tp ? `${labelFor(tp)} <span class="muted small mono">${pct(f.holdings[tp], 1)}</span>` : `<span class="muted">None disclosed</span>`}</td>
+            <td>${liqChip(f)}</td>
+            <td class="num">${f.minLabel === "1 share" ? "1 share" : f.minLabel}</td>
+          </tr>`;
+        }).join("") || `<tr><td colspan="7" class="muted">No funds match "${state.q}". Try a company name like Databricks.</td></tr>`}
+        </tbody>
+      </table>
+      </div>
+      <p class="small muted" style="margin:12px 0 0">"$100 buys" is the value of underlying assets $100 gets you at the latest price, against the fund's last reported NAV, after any upfront sales load. For listed funds, that NAV can be months old.</p>
+    </section>
+    <aside class="panel">
+      <h2>Alerts</h2>
+      <div class="alerts">
+        ${ALERTS.map(a => `<div class="alert ${a.kind}"><div class="when">${a.when} · <a href="#fund-${a.fund}">${fundById(a.fund).ticker}</a></div>${a.text}</div>`).join("")}
+      </div>
+    </aside>
+  </div>`;
+}
+
+function stackBar(f) {
+  const a = assetsPer100(f);
+  const total = Math.max(100, a);
+  const segs = Object.entries(f.holdings).sort((x, y) => (isCo(y[0]) ? 1 : 0) - (isCo(x[0]) ? 1 : 0) || y[1] - x[1]);
+  const lost = 100 - a;
+  let html = segs.map(([k, w]) => `<div style="width:${(a * w / total) * 100}%;background:${colorFor(k)}" title="${labelFor(k)}: ${$(a * w)}"></div>`).join("");
+  if (lost > 0.005) html += `<div class="prem" style="width:${(lost / total) * 100}%" title="No assets behind it: ${$(lost)}"></div>`;
+  const legend = segs.map(([k, w]) => `<span><i style="background:${colorFor(k)}"></i>${labelFor(k)} <b class="mono">${$(a * w)}</b></span>`).join("") +
+    (lost > 0.005 ? `<span><i class="prem"></i>${f.load ? "Sales load" : "Premium"}, no assets behind it <b class="mono">${$(lost)}</b></span>` : "");
+  return `<div class="stack" role="img" aria-label="What $100 buys in ${f.ticker}">${html}</div><div class="legend">${legend}</div>`;
+}
+
+function viewFund(id) {
+  const f = fundById(id); if (!f) return viewHome();
+  const s = scores(f), p = prem(f), a = assetsPer100(f), tp = topPrivate(f), pubCo = publicCoShare(f);
+  const rows = [
+    ["Price vs assets", s.premium, f.liquidity === "daily" ? (p > 0 ? `You pay ${$(f.price)} per share for ${$(f.nav)} of assets, using the ${f.navDate} NAV.` : `Shares cost ${$(f.price)} against ${$(f.nav)} of assets per share at the ${f.navDate} NAV. A discount can last for years.`) : f.liquidity === "etf" ? "ETF prices stay close to asset value." : "You buy and sell at the fund's NAV."],
+    ["True cost", s.cost, `${f.expenseNote}. On $1,000 that's about ${$(f.expense * 10, 0)} a year${f.load ? ` and up to ${$(f.load * 10, 0)} on day one` : ""}.`],
+    ["Getting money out", s.liquidity, f.liqNote],
+    ["NAV freshness", s.fresh, f.navAge > 5 ? `The last reported NAV is from ${f.navDate}, about ${f.navAge} days ago.` : `NAV is published ${f.navDate === "daily" ? "daily" : "regularly"}, but private holdings inside it are still estimates.`],
+    ["Transparency", s.transp, { daily: "Full holdings published daily.", monthly: "Top holdings published monthly.", website: "Holdings posted on the fund's website without a clear date.", quarterly: "Holdings disclosed quarterly in SEC filings." }[f.disclosure]]
+  ];
+  const holdingsRows = Object.entries(f.holdings).sort((x, y) => y[1] - x[1]).map(([k, w]) => {
+    const c = COMPANIES[k];
+    return `<tr${c ? ` class="click" data-go="company-${k}"` : ""}><td>${c ? `<a class="fundname" href="#company-${k}">${c.name}</a> <span class="muted small">${c.sector}</span>` : labelFor(k)}</td>
+      <td class="num">${pct(w)}</td><td class="num">${$(a * w)}</td><td>${statusChip(k)}</td></tr>`;
+  }).join("");
+  const fundAlerts = ALERTS.filter(x => x.fund === f.id);
+  return `
+  <a href="#home" class="small">← All fund ratings</a>
+  <section class="panel fund-head">
+    <span class="grade big g-${grade(s.total)}">${grade(s.total)}</span>
+    <div class="meta">
+      <h1>${f.name}</h1>
+      <div class="muted"><span class="mono">${f.ticker}</span> · ${f.type} · ${f.sponsor}</div>
+      <div class="row">${premChip(f)} ${liqChip(f)} <span class="chip neutral">Score ${s.total.toFixed(0)}/100</span></div>
+    </div>
+    <button class="btn" data-add="${f.id}">Add ${f.min > 100 ? $(f.min, 0) : "$100"} to My Lookthrough</button>
+  </section>
+  <section class="facts">
+    <div><div class="l">Share price${f.priceDate ? ` · ${f.priceDate}` : ""}</div><div class="v">${f.price ? $(f.price) : "At NAV"}</div></div>
+    <div><div class="l">NAV per share · ${f.navDate}</div><div class="v">${f.nav ? $(f.nav) : "Daily"}</div></div>
+    <div><div class="l">Premium / discount</div><div class="v" style="color:${p > 0.02 ? "var(--bad)" : p < -0.02 ? "var(--good)" : "var(--ink)"}">${f.liquidity === "daily" ? sPct(p) : "None"}</div></div>
+    <div><div class="l">Still-private share</div><div class="v">${pct(privateShare(f), 0)}${f.holdings.other || f.holdings.undisclosed ? "+" : ""}</div></div>
+    <div><div class="l">All-in yearly cost</div><div class="v">${s.annualCost.toFixed(2)}%</div></div>
+    <div><div class="l">Minimum</div><div class="v">${f.minLabel}</div></div>
+  </section>
+  <section class="panel">
+    <h2>What $100 actually buys</h2>
+    <p class="callout">${tp ? `$100 in ${f.ticker} gets you ${$(a * f.holdings[tp])} of ${labelFor(tp)}, its biggest still-private holding.` : `$100 in ${f.ticker} gets you ${$(a)} of assets.`}${a < 99.5 ? ` ${$(100 - a)} has no assets behind it.` : ""}${pubCo > 0.05 ? ` ${$(a * pubCo)} is in companies you can now buy directly.` : ""}</p>
+    ${stackBar(f)}
+    <p class="small muted" style="margin:10px 0 0">Holdings as of ${f.holdingsAsOf}. ${f.note}</p>
+  </section>
+  <div class="grid-even">
+    <section class="panel">
+      <h2>Scorecard</h2>
+      <div class="scores">
+        ${rows.map(([l, v, why]) => `<div class="score-row"><div class="lbl">${l}</div><div class="bar"><span style="width:${v}%;background:${scoreColor(v)}"></span></div><div class="mono small">${v.toFixed(0)}</div><div class="why">${why}</div></div>`).join("")}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Holdings</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Holding</th><th class="num">Weight</th><th class="num">Per $100</th><th>Status</th></tr></thead>
+        <tbody>${holdingsRows}</tbody>
+      </table></div>
+      ${fundAlerts.length ? `<div class="alerts" style="margin-top:14px">${fundAlerts.map(x => `<div class="alert ${x.kind}"><div class="when">${x.when}</div>${x.text}</div>`).join("")}</div>` : ""}
+    </section>
+  </div>
+  <section class="panel">
+    <h3>Sources</h3>
+    <ul class="small" style="margin:8px 0 0;padding-left:18px">${f.sources.map(([t, u]) => `<li><a href="${u}">${t}</a></li>`).join("")}</ul>
+  </section>`;
+}
+
+function exposureFor(k) {
+  return FUNDS.filter(f => f.holdings[k]).map(f => ({ f, per100: assetsPer100(f) * f.holdings[k] })).sort((a, b) => b.per100 - a.per100);
+}
+function viewCompanies() {
+  const rows = Object.entries(COMPANIES).map(([k, c]) => ({ k, c, ex: exposureFor(k) })).sort((a, b) => b.ex.length - a.ex.length || a.c.name.localeCompare(b.c.name)).map(({ k, c, ex }) => {
+    const best = ex[0];
+    return `<tr class="click" data-go="company-${k}">
+      <td><a class="fundname" href="#company-${k}">${c.name}</a><div class="muted small">${c.sector}</div></td>
+      <td>${statusChip(k)}</td>
+      <td class="num">${ex.length}</td>
+      <td>${best ? `<span class="mono">${best.f.ticker}</span> <span class="muted small">${$(best.per100)} per $100</span>` : "None"}</td></tr>`;
+  }).join("");
+  return `
+  <section class="hero"><h1>Companies</h1><p>Pick the company you believe in. See every retail fund that holds it and how much of it $100 really gets you.</p></section>
+  <section class="panel"><div class="table-wrap"><table>
+    <thead><tr><th>Company</th><th>Status</th><th class="num">Funds holding it</th><th>Most exposure per $100</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <p class="small muted" style="margin:12px 0 0">Only disclosed holdings are counted. Funds may hold small positions they don't break out.</p></section>`;
+}
+function viewCompany(k) {
+  const c = COMPANIES[k]; if (!c) return viewCompanies();
+  const ex = exposureFor(k);
+  const max = Math.max(...ex.map(e => e.per100), 1);
+  const isPub = c.status === "public";
+  return `
+  <a href="#companies" class="small">← All companies</a>
+  <section class="hero"><h1>${c.name}</h1><p>${c.sector}. ${isPub ? `${c.name} has been publicly traded since ${c.since}. You can buy its shares directly through any brokerage with no fund fee.` : `${c.name} is private and restricts who can buy its stock, so retail investors can only get exposure through funds like these.`}</p></section>
+  ${isPub ? `<div class="alert warn">These funds still charge their yearly fee on ${c.name}. Buying the stock directly avoids that cost entirely.</div>` : ""}
+  <section class="panel">
+    <h2>How much ${c.name} $100 gets you</h2>
+    <div class="scores" style="margin-top:8px">
+      ${ex.map(e => { const s = scores(e.f); return `<div class="score-row"><div class="lbl"><a href="#fund-${e.f.id}" class="fundname">${e.f.ticker}</a> <span class="grade g-${grade(s.total)}" style="width:22px;height:22px;font-size:13px;vertical-align:middle">${grade(s.total)}</span></div><div class="bar" style="height:14px"><span style="width:${(e.per100 / max) * 100}%;background:${c.color}"></span></div><div class="mono small">${$(e.per100)}</div>
+      <div class="why">${pct(e.f.holdings[k])} of the fund as of ${e.f.holdingsAsOf.split(" (")[0]} · ${premChip(e.f)} · $10 of ${c.name} costs about ${$(10 / (e.per100 / 100), 0)} here, plus ${s.annualCost.toFixed(2)}% a year</div></div>`; }).join("") || `<p class="muted">No rated fund discloses a position in ${c.name}.</p>`}
+    </div>
+  </section>`;
+}
+
+function portfolioCalc() {
+  let invested = 0, assets = 0, fees = 0, illiquid = 0, nowPublic = 0;
+  const exp = {}, sources = {}, belowMin = [];
+  FUNDS.forEach(f => {
+    const amt = +state.holdings[f.id] || 0; if (!amt) return;
+    if (amt < f.min) belowMin.push(f);
+    invested += amt;
+    const a = amt * (1 - f.load / 100) / (1 + prem(f));
+    assets += a;
+    fees += amt * f.expense / 100;
+    nowPublic += a * publicCoShare(f);
+    if (f.liquidity === "quarterly") illiquid += amt;
+    Object.entries(f.holdings).forEach(([k, w]) => {
+      exp[k] = (exp[k] || 0) + a * w;
+      if (isCo(k)) (sources[k] = sources[k] || []).push(f.ticker);
+    });
+  });
+  return { invested, assets, gap: invested - assets, fees, illiquid, nowPublic, exp, sources, belowMin };
+}
+function viewPortfolio() {
+  const p = portfolioCalc(), r = readiness();
+  const overCap = p.invested - r.cap;
+  const expRows = Object.entries(p.exp).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+    `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colorFor(k)};margin-right:8px"></i>${isCo(k) ? `<a class="fundname" href="#company-${k}">${labelFor(k)}</a>` : labelFor(k)}</td><td class="num">${$(v)}</td><td class="num">${p.assets ? pct(v / p.assets) : "None"}</td><td>${p.sources[k] && p.sources[k].length > 1 ? `<span class="chip warn">Overlap: ${p.sources[k].join(" + ")}</span>` : statusChip(k)}</td></tr>`).join("");
+  const overlaps = Object.entries(p.sources).filter(([, s]) => s.length > 1);
+  return `
+  <section class="hero"><h1>My Lookthrough</h1><p>Enter what you hold in each fund. Lookthrough combines them into what you actually own underneath. Example amounts are filled in so you can see how it works.</p></section>
+  <section class="kpis">
+    <div class="kpi"><div class="l">You invested</div><div class="v">${$(p.invested, 0)}</div></div>
+    <div class="kpi"><div class="l">Assets behind it</div><div class="v">${$(p.assets, 0)}</div></div>
+    <div class="kpi ${p.gap > 20 ? "bad" : p.gap < -20 ? "good" : ""}"><div class="l">${p.gap >= 0 ? "Paid above asset value" : "Bought below asset value"}</div><div class="v">${$(Math.abs(p.gap), 0)}</div></div>
+    <div class="kpi"><div class="l">Fund fees per year</div><div class="v">${$(p.fees, 0)}</div></div>
+    <div class="kpi ${overCap > 0 ? "warn" : "good"}"><div class="l">Your alternatives cap</div><div class="v">${$(r.cap, 0)}</div></div>
+  </section>
+  ${overCap > 0 ? `<div class="alert warn">You're ${$(overCap, 0)} over the cap from your <a href="#ready">readiness check</a> (rung ${r.rung}, ${pct(r.capPct, 0)} of investable assets).</div>` : `<div class="alert">You're within your alternatives cap from the <a href="#ready">readiness check</a>.</div>`}
+  ${p.illiquid ? `<div class="alert warn">${$(p.illiquid, 0)} (${pct(p.illiquid / p.invested, 0)}) sits in interval funds that only buy back shares quarterly, with caps. Don't count it as emergency money.</div>` : ""}
+  ${p.nowPublic > 1 ? `<div class="alert">${$(p.nowPublic, 0)} of what you own is in companies that are now public. You could hold those directly with no fund fee.</div>` : ""}
+  ${p.belowMin.length ? `<div class="alert bad">${p.belowMin.map(f => `${f.ticker} has a ${f.minLabel} minimum`).join("; ")}. Raise the amount or pick a fund with a lower minimum.</div>` : ""}
+  <div class="grid-even">
+    <section class="panel">
+      <h2>Your funds</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Fund</th><th>Score</th><th class="num">Minimum</th><th class="num">Amount ($)</th></tr></thead>
+        <tbody>${FUNDS.map(f => `<tr><td><a class="fundname" href="#fund-${f.id}">${f.ticker}</a><div class="muted small">${f.name}</div></td><td><span class="grade g-${grade(scores(f).total)}">${grade(scores(f).total)}</span></td><td class="num small">${f.minLabel}</td>
+          <td class="num"><label for="h-${f.id}" style="position:absolute;left:-9999px">${f.ticker} amount</label><input id="h-${f.id}" type="number" min="0" step="10" value="${state.holdings[f.id]}" data-hold="${f.id}"></td></tr>`).join("")}</tbody>
+      </table></div>
+    </section>
+    <section class="panel">
+      <h2>What you own underneath</h2>
+      ${overlaps.length ? `<p class="small" style="margin-top:0">You're paying two sets of fees for ${overlaps.map(([k]) => labelFor(k)).join(", ")}.</p>` : ""}
+      <div class="table-wrap"><table>
+        <thead><tr><th>Holding</th><th class="num">Value</th><th class="num">Share</th><th></th></tr></thead>
+        <tbody>${expRows || `<tr><td colspan="4" class="muted">Add an amount to a fund to see your look-through holdings.</td></tr>`}</tbody>
+      </table></div>
+    </section>
+  </div>`;
+}
+
+function viewReady() {
+  const r = state.ready, rd = readiness();
+  const steps = [
+    ["Build a safety net", "At least 3 months of expenses saved and no credit card or other high-interest debt.", "0%"],
+    ["Starter rung", "3+ months saved, no high-interest debt.", "5%"],
+    ["Steady rung", "6+ months saved.", "10%"],
+    ["Established rung", "6+ months saved and $25k+ investable.", "15%"]
+  ];
+  return `
+  <section class="hero"><h1>Am I ready for alternatives?</h1><p>Private-market funds can lock up your money or drop fast. Wealthy investors buy them after the basics are covered. This check applies the same order to you and sets a cap on how much of your money goes in.</p></section>
+  <div class="grid-even">
+    <section class="panel">
+      <h2>Your situation</h2>
+      <form class="form" id="readyform">
+        <div class="field"><label for="r-em">Months of expenses in savings</label><input id="r-em" type="number" min="0" step="0.5" value="${r.emergency}" data-ready="emergency"></div>
+        <div class="field"><label for="r-debt">Do you carry credit card or other high-interest debt?</label>
+          <select id="r-debt" data-ready="debt"><option value="no"${r.debt === "no" ? " selected" : ""}>No</option><option value="yes"${r.debt === "yes" ? " selected" : ""}>Yes</option></select></div>
+        <div class="field"><label for="r-inv">Investable assets ($)</label><input id="r-inv" type="number" min="0" step="500" value="${r.investable}" data-ready="investable"><div class="hint">Savings and investments, not counting your emergency fund.</div></div>
+      </form>
+    </section>
+    <section class="panel">
+      <h2>Your rung: ${rd.rung} of 3</h2>
+      <p class="callout" style="margin-top:4px">${rd.rung === 0 ? "Hold off on alternatives for now." : `Cap: ${pct(rd.capPct, 0)} of investable assets, ${$(rd.cap, 0)}.`}</p>
+      <div class="rungs">
+        ${steps.map(([t, d, c], i) => `<div class="rung ${i < rd.rung ? "done" : ""} ${i === rd.rung ? "current" : ""}"><span class="n">${i}</span><div><b>${t}</b><div class="small muted">${d}</div></div><span class="mono small">cap ${c}</span></div>`).join("")}
+      </div>
+      ${rd.rung === 0 ? `<p class="small">Next step: ${r.debt === "yes" ? "pay down high-interest debt first. Its interest rate is a guaranteed cost most funds won't out-earn." : "keep building savings until you reach 3 months of expenses."}</p>` : ""}
+      <div class="row" style="margin-top:14px"><a class="btn" href="#portfolio">Check My Lookthrough against this cap</a></div>
+    </section>
+  </div>
+  <p class="small muted">General education using common planning guidelines, not personal advice.</p>`;
+}
+
+function viewMethod() {
+  return `
+  <section class="panel prose">
+    <h1>How we score</h1>
+    <p>Each fund gets a 0 to 100 Lookthrough score from five parts. The score measures how fair the fund is to a retail buyer, not whether its companies will do well. A fund can score well and still hold mostly public stocks, which is why every fund page also shows its still-private share.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Part</th><th class="num">Weight</th><th>What lowers it</th></tr></thead>
+      <tbody>
+        <tr><td>Price vs assets</td><td class="num">30%</td><td>Paying more per share than the last reported NAV (discounts are penalized lightly, since they can persist)</td></tr>
+        <tr><td>True cost</td><td class="num">25%</td><td>High yearly expenses, plus upfront sales loads spread over 5 years</td></tr>
+        <tr><td>Getting money out</td><td class="num">20%</td><td>Quarterly buybacks with caps, and worse if recent buybacks were prorated</td></tr>
+        <tr><td>NAV freshness</td><td class="num">15%</td><td>Days since the last published NAV</td></tr>
+        <tr><td>Transparency</td><td class="num">10%</td><td>Holdings disclosed rarely or without dates</td></tr>
+      </tbody></table></div>
+    <p>Grades: A is 80 and up, B 68 to 79, C 55 to 67, D 42 to 54, F below 42.</p>
+    <h3>Which funds are included</h3>
+    <p>Funds that hold private companies and that anyone can buy without being an accredited investor: exchange-listed closed-end funds (RVI, DXYZ, VCX), interval funds (ARKVX, PRIVX) and an ETF (XOVR).</p>
+    <h3>Where the data comes from</h3>
+    <ul>
+      <li>Share prices, NAVs and premiums: CEF Connect and market data pages.</li>
+      <li>Holdings: SEC filings (N-PORT, annual reports) and fund websites, as summarized by the sources linked on each fund page.</li>
+      <li>Fees and buyback terms: prospectuses, fund pages and broker fee tables.</li>
+    </ul>
+    <p>Listed closed-end funds report NAV only every few months, so their premium or discount compares today's price with an old NAV. Each fund page shows the dates.</p>
+    <h3>Independence</h3>
+    <p>Lookthrough takes no payments from fund sponsors and earns nothing when you buy a fund. Revenue would come from a paid tier for alerts and portfolio tools, and from licensing the scores to advisors and financial media.</p>
+    <h3>What this isn't</h3>
+    <p>Lookthrough doesn't sell funds, execute trades or tell any individual what to buy. The same scores are shown to everyone.</p>
+  </section>`;
+}
+
+// ---------- Router ----------
+const app = document.getElementById("app");
+function render() {
+  const h = (location.hash || "#home").slice(1);
+  let html, navKey = h;
+  if (h.startsWith("fund-")) { html = viewFund(h.slice(5)); navKey = "home"; }
+  else if (h.startsWith("company-")) { html = viewCompany(h.slice(8)); navKey = "companies"; }
+  else html = ({ home: viewHome, companies: viewCompanies, portfolio: viewPortfolio, ready: viewReady, method: viewMethod }[h] || viewHome)();
+  app.innerHTML = html;
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("active", a.dataset.r === navKey));
+}
+window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+app.addEventListener("click", e => {
+  const add = e.target.closest("[data-add]");
+  if (add) { state.holdings[add.dataset.add] = (+state.holdings[add.dataset.add] || 0) + 100; location.hash = "portfolio"; return; }
+  if (e.target.closest("a, input, select, button")) return;
+  const row = e.target.closest("[data-go]");
+  if (row) location.hash = row.dataset.go;
+});
+app.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "q") { state.q = t.value; const pos = t.selectionStart; render(); const n = document.getElementById("q"); n.focus(); n.setSelectionRange(pos, pos); }
+});
+app.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "sort") { state.sort = t.value; render(); }
+  if (t.dataset.hold) { state.holdings[t.dataset.hold] = Math.max(0, +t.value || 0); render(); document.getElementById(t.id)?.focus(); }
+  if (t.dataset.ready) { state.ready[t.dataset.ready] = t.dataset.ready === "debt" ? t.value : Math.max(0, +t.value || 0); render(); document.getElementById(t.id)?.focus(); }
+});
+render();
+</script>
+</body>
+</html>
